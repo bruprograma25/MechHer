@@ -1,0 +1,119 @@
+Dashboard
+import React from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Car, Wrench, Bell, TrendingUp, AlertCircle, CheckCircle2, Clock, Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+import StatsCard from "../components/dashboard/StatsCard";
+import RecentMaintenances from "../components/dashboard/RecentMaintenances";
+import UpcomingAlerts from "../components/dashboard/UpcomingAlerts";
+import VehicleOverview from "../components/dashboard/VehicleOverview";
+
+export default function Dashboard() {
+  const { data: vehicles, isLoading: loadingVehicles } = useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => base44.entities.Vehicle.list(),
+    initialData: [],
+  });
+
+  const { data: maintenances, isLoading: loadingMaintenances } = useQuery({
+    queryKey: ['maintenances'],
+    queryFn: () => base44.entities.Maintenance.list('-created_date'),
+    initialData: [],
+  });
+
+  const { data: alerts, isLoading: loadingAlerts } = useQuery({
+    queryKey: ['alerts'],
+    queryFn: () => base44.entities.MaintenanceAlert.filter({ is_completed: false }),
+    initialData: [],
+  });
+
+  const completedMaintenances = maintenances.filter(m => m.status === 'completed').length;
+  const inProgressMaintenances = maintenances.filter(m => m.status === 'in_progress').length;
+  const urgentAlerts = alerts.filter(a => a.priority === 'urgent' || a.priority === 'high').length;
+
+  return (
+    <div className="p-4 md:p-8 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent mb-2">
+            Bem-vinda ao MechHer! 👋
+          </h1>
+          <p className="text-gray-600">
+            Aqui está um resumo dos seus veículos e manutenções
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatsCard
+            title="Meus Veículos"
+            value={vehicles.length}
+            icon={Car}
+            gradient="from-red-500 to-red-600"
+            description="cadastrados"
+          />
+          <StatsCard
+            title="Manutenções Concluídas"
+            value={completedMaintenances}
+            icon={CheckCircle2}
+            gradient="from-green-500 to-emerald-600"
+            description="serviços realizados"
+          />
+          <StatsCard
+            title="Em Andamento"
+            value={inProgressMaintenances}
+            icon={Clock}
+            gradient="from-blue-500 to-cyan-600"
+            description="serviços ativos"
+          />
+          <StatsCard
+            title="Alertas Urgentes"
+            value={urgentAlerts}
+            icon={AlertCircle}
+            gradient="from-orange-500 to-red-600"
+            description="requerem atenção"
+          />
+        </div>
+
+        {vehicles.length === 0 ? (
+          <Card className="border-2 border-dashed border-red-200 bg-white/50 backdrop-blur-sm">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-100 rounded-full flex items-center justify-center mb-4">
+                <Car className="w-10 h-10 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Cadastre seu primeiro veículo
+              </h3>
+              <p className="text-gray-600 mb-6 text-center max-w-md">
+                Comece a acompanhar a manutenção do seu carro e tenha controle total sobre todos os serviços
+              </p>
+              <Link to={createPageUrl("MyVehicles")}>
+                <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Veículo
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <VehicleOverview vehicles={vehicles} />
+              <RecentMaintenances maintenances={maintenances.slice(0, 5)} />
+            </div>
+            <div>
+              <UpcomingAlerts alerts={alerts.slice(0, 6)} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
