@@ -1,119 +1,110 @@
-Dashboard
 import React from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { Car, Wrench, Bell, TrendingUp, AlertCircle, CheckCircle2, Clock, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Bell, AlertCircle, AlertTriangle, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Button } from "@/components/ui/button";
 
-import StatsCard from "../components/dashboard/StatsCard";
-import RecentMaintenances from "../components/dashboard/RecentMaintenances";
-import UpcomingAlerts from "../components/dashboard/UpcomingAlerts";
-import VehicleOverview from "../components/dashboard/VehicleOverview";
+const priorityConfig = {
+  urgent: {
+    color: "bg-red-100 text-red-800 border-red-200",
+    icon: AlertCircle,
+    label: "Urgente",
+  },
+  high: {
+    color: "bg-orange-100 text-orange-800 border-orange-200",
+    icon: AlertTriangle,
+    label: "Alta",
+  },
+  medium: {
+    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    icon: Bell,
+    label: "Média",
+  },
+  low: {
+    color: "bg-blue-100 text-blue-800 border-blue-200",
+    icon: Info,
+    label: "Baixa",
+  },
+};
 
-export default function Dashboard() {
-  const { data: vehicles, isLoading: loadingVehicles } = useQuery({
-    queryKey: ['vehicles'],
-    queryFn: () => base44.entities.Vehicle.list(),
-    initialData: [],
-  });
-
-  const { data: maintenances, isLoading: loadingMaintenances } = useQuery({
-    queryKey: ['maintenances'],
-    queryFn: () => base44.entities.Maintenance.list('-created_date'),
-    initialData: [],
-  });
-
-  const { data: alerts, isLoading: loadingAlerts } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: () => base44.entities.MaintenanceAlert.filter({ is_completed: false }),
-    initialData: [],
-  });
-
-  const completedMaintenances = maintenances.filter(m => m.status === 'completed').length;
-  const inProgressMaintenances = maintenances.filter(m => m.status === 'in_progress').length;
-  const urgentAlerts = alerts.filter(a => a.priority === 'urgent' || a.priority === 'high').length;
+export default function UpcomingAlerts({ alerts }) {
+  if (alerts.length === 0) {
+    return (
+      <Card className="bg-white/80 backdrop-blur-sm border-red-100">
+        <CardHeader className="border-b border-red-50">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Bell className="w-5 h-5 text-red-600" />
+            Próximos Alertas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Bell className="w-8 h-8 text-green-600" />
+          </div>
+          <p className="text-gray-500">Tudo em dia! Sem alertas pendentes</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="p-4 md:p-8 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent mb-2">
-            Bem-vinda ao MechHer! 👋
-          </h1>
-          <p className="text-gray-600">
-            Aqui está um resumo dos seus veículos e manutenções
-          </p>
+    <Card className="bg-white/80 backdrop-blur-sm border-red-100">
+      <CardHeader className="border-b border-red-50">
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Bell className="w-5 h-5 text-red-600" />
+            Próximos Alertas
+          </CardTitle>
+          <Link to={createPageUrl("Alerts")}>
+            <Button variant="ghost" size="sm" className="hover:bg-red-50">
+              Ver todos
+            </Button>
+          </Link>
         </div>
+      </CardHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Meus Veículos"
-            value={vehicles.length}
-            icon={Car}
-            gradient="from-red-500 to-red-600"
-            description="cadastrados"
-          />
-          <StatsCard
-            title="Manutenções Concluídas"
-            value={completedMaintenances}
-            icon={CheckCircle2}
-            gradient="from-green-500 to-emerald-600"
-            description="serviços realizados"
-          />
-          <StatsCard
-            title="Em Andamento"
-            value={inProgressMaintenances}
-            icon={Clock}
-            gradient="from-blue-500 to-cyan-600"
-            description="serviços ativos"
-          />
-          <StatsCard
-            title="Alertas Urgentes"
-            value={urgentAlerts}
-            icon={AlertCircle}
-            gradient="from-orange-500 to-red-600"
-            description="requerem atenção"
-          />
-        </div>
+      <CardContent className="p-6">
+        <div className="space-y-3">
+          {alerts.map((alert) => {
+            const config = priorityConfig[alert.priority] || priorityConfig.medium;
+            const Icon = config.icon;
 
-        {vehicles.length === 0 ? (
-          <Card className="border-2 border-dashed border-red-200 bg-white/50 backdrop-blur-sm">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-100 rounded-full flex items-center justify-center mb-4">
-                <Car className="w-10 h-10 text-red-600" />
+            return (
+              <div
+                key={alert.id}
+                className="p-4 rounded-xl border border-red-100 hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${config.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm text-gray-900 mb-1">
+                      {alert.title}
+                    </h4>
+                    {alert.description && (
+                      <p className="text-xs text-gray-600 mb-2">
+                        {alert.description}
+                      </p>
+                    )}
+                    {alert.due_date && (
+                      <p className="text-xs text-gray-500">
+                        {format(new Date(alert.due_date), "dd 'de' MMM", {
+                          locale: ptBR,
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Cadastre seu primeiro veículo
-              </h3>
-              <p className="text-gray-600 mb-6 text-center max-w-md">
-                Comece a acompanhar a manutenção do seu carro e tenha controle total sobre todos os serviços
-              </p>
-              <Link to={createPageUrl("MyVehicles")}>
-                <Button className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Veículo
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <VehicleOverview vehicles={vehicles} />
-              <RecentMaintenances maintenances={maintenances.slice(0, 5)} />
-            </div>
-            <div>
-              <UpcomingAlerts alerts={alerts.slice(0, 6)} />
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
